@@ -6,6 +6,8 @@ import threading
 
 # Inicializa a variável do caminho dos arquivos
 file_paths = []
+input_folder = ""
+output_folder = ""
 
 # Função para tentar abrir o arquivo com diferentes codificações
 def read_file_with_encoding(file_path):
@@ -20,23 +22,34 @@ def read_file_with_encoding(file_path):
             continue  # Tenta a próxima codificação
     raise ValueError("Não foi possível ler o arquivo com as codificações tentadas.")  # Se todas falharem
 
-def upload_files():
-    global file_paths
-    file_paths = filedialog.askopenfilenames(filetypes=[("Text files", "*.txt")])  # Permite selecionar múltiplos arquivos
+def select_input_folder():
+    global input_folder
+    input_folder = filedialog.askdirectory(title="Selecione a pasta de origem")
     
-    if file_paths:
-        file_label.config(text=f"{len(file_paths)} Arquivo(s) selecionado(s)")
-        check_file_type()
+    if input_folder:
+        input_label.config(text=f"Pasta de Origem: {input_folder}")
+        list_files_in_folder()
 
-def check_file_type():
-    if file_paths and all(file.endswith(".txt") for file in file_paths):
-        type_label.config(text="Tipo de arquivo: TXT", fg="green")
-    else:
-        type_label.config(text="Tipo de arquivo: Desconhecido", fg="red")
+def select_output_folder():
+    global output_folder
+    output_folder = filedialog.askdirectory(title="Selecione a pasta de destino")
+    
+    if output_folder:
+        output_label.config(text=f"Pasta de Destino: {output_folder}")
+
+def list_files_in_folder():
+    global file_paths
+    if input_folder:
+        # Lista todos os arquivos .txt na pasta de origem
+        file_paths = [os.path.join(input_folder, f) for f in os.listdir(input_folder) if f.endswith(".txt")]
+        file_label.config(text=f"{len(file_paths)} Arquivo(s) encontrado(s)")
 
 def convert_files():
     if not file_paths:
-        messagebox.showerror("Erro", "Selecione arquivos TXT válidos!")
+        messagebox.showerror("Erro", "Nenhum arquivo .txt encontrado na pasta de origem!")
+        return
+    if not output_folder:
+        messagebox.showerror("Erro", "Selecione uma pasta de destino!")
         return
     
     if len(file_paths) > 100:
@@ -54,7 +67,7 @@ def perform_conversion():
     try:
         total_files = len(file_paths)
         for index, file_path in enumerate(file_paths):
-            output_file = file_path.replace(".txt", ".csv")
+            output_file = os.path.join(output_folder, os.path.basename(file_path).replace(".txt", ".csv"))
             
             # Tenta ler o arquivo com diferentes codificações
             lines, encoding_used = read_file_with_encoding(file_path)
@@ -99,7 +112,7 @@ def toggle_theme():
 # Criação da interface
 root = tk.Tk()
 root.title("Conversor de TXT para CSV")
-root.geometry("400x300")
+root.geometry("400x350")
 
 style = ttk.Style()
 style.theme_use("clam")
@@ -107,11 +120,17 @@ style.theme_use("clam")
 file_label = tk.Label(root, text="Nenhum arquivo selecionado", wraplength=300)
 file_label.pack(pady=5)
 
-type_label = tk.Label(root, text="Tipo de arquivo: -", fg="blue")
-type_label.pack(pady=5)
+input_label = tk.Label(root, text="Pasta de Origem: -", wraplength=300, fg="blue")
+input_label.pack(pady=5)
 
-upload_btn = tk.Button(root, text="Subir Arquivos", command=upload_files)
-upload_btn.pack(pady=5)
+output_label = tk.Label(root, text="Pasta de Destino: -", wraplength=300, fg="blue")
+output_label.pack(pady=5)
+
+upload_input_btn = tk.Button(root, text="Selecionar Pasta de Origem", command=select_input_folder)
+upload_input_btn.pack(pady=5)
+
+upload_output_btn = tk.Button(root, text="Selecionar Pasta de Destino", command=select_output_folder)
+upload_output_btn.pack(pady=5)
 
 convert_btn = tk.Button(root, text="Converter para CSV", command=convert_files)
 convert_btn.pack(pady=5)
