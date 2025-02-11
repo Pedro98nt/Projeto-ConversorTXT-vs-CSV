@@ -1,0 +1,2 @@
+('C:\\Users\\pedro.soares\\Videos\\projetos\\conversor\\build\\projeto\\PYZ-00.pyz',
+ [])
