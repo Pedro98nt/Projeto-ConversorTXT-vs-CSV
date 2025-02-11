@@ -4,9 +4,10 @@ import pandas as pd
 import os
 import threading
 
-# Inicializa a variável do caminho do arquivo
-file_path = None
+# Inicializa a variável do caminho dos arquivos
+file_paths = []
 
+# Função para tentar abrir o arquivo com diferentes codificações
 def read_file_with_encoding(file_path):
     encodings = ['utf-8', 'ISO-8859-1', 'latin1', 'cp1252']  # Lista de codificações a tentar
     for encoding in encodings:
@@ -19,65 +20,66 @@ def read_file_with_encoding(file_path):
             continue  # Tenta a próxima codificação
     raise ValueError("Não foi possível ler o arquivo com as codificações tentadas.")  # Se todas falharem
 
-def upload_file():
-    global file_path
-    file_path = filedialog.askopenfilename(filetypes=[("Text files", "*.txt")])
+def upload_files():
+    global file_paths
+    file_paths = filedialog.askopenfilenames(filetypes=[("Text files", "*.txt")])  # Permite selecionar múltiplos arquivos
     
-    if file_path:
-        file_label.config(text=f"Arquivo selecionado: {os.path.basename(file_path)}")
+    if file_paths:
+        file_label.config(text=f"{len(file_paths)} Arquivo(s) selecionado(s)")
         check_file_type()
 
 def check_file_type():
-    if file_path and file_path.endswith(".txt"):
+    if file_paths and all(file.endswith(".txt") for file in file_paths):
         type_label.config(text="Tipo de arquivo: TXT", fg="green")
     else:
         type_label.config(text="Tipo de arquivo: Desconhecido", fg="red")
 
-def convert_file():
-    global file_path
-    
-    if not file_path or not file_path.endswith(".txt"):
-        messagebox.showerror("Erro", "Selecione um arquivo TXT válido!")
+def convert_files():
+    if not file_paths:
+        messagebox.showerror("Erro", "Selecione arquivos TXT válidos!")
         return
     
+    if len(file_paths) > 100:
+        messagebox.showwarning("Aviso", "Você selecionou mais de 100 arquivos. Isso pode demorar um pouco.")
+    
     try:
-        output_file = file_path.replace(".txt", ".csv")
-        
-        # Tenta ler o arquivo com diferentes codificações
-        lines, encoding_used = read_file_with_encoding(file_path)
-        
-        # Determine o delimitador com base nas linhas lidas
-        first_line = lines[0]
-        delimiter = "\t" if "\t" in first_line else ","
-        print(f"Delimitador detectado: {delimiter}")
-        
         # Cria uma thread para executar a conversão sem travar a interface
-        conversion_thread = threading.Thread(target=perform_conversion, args=(output_file, delimiter, encoding_used))
+        conversion_thread = threading.Thread(target=perform_conversion)
         conversion_thread.start()
 
     except Exception as e:
         messagebox.showerror("Erro", f"Erro ao converter: {str(e)}")
 
-def perform_conversion(output_file, delimiter, encoding_used):
+def perform_conversion():
     try:
-        print("Iniciando a conversão...")
+        total_files = len(file_paths)
+        for index, file_path in enumerate(file_paths):
+            output_file = file_path.replace(".txt", ".csv")
+            
+            # Tenta ler o arquivo com diferentes codificações
+            lines, encoding_used = read_file_with_encoding(file_path)
+            
+            # Determine o delimitador com base nas linhas lidas
+            first_line = lines[0]
+            delimiter = "\t" if "\t" in first_line else ","
+            print(f"Delimitador detectado para {file_path}: {delimiter}")
+            
+            # Use chunksize para lidar com grandes arquivos
+            chunk_size = 10000  # Tamanho do pedaço (ajuste conforme necessário)
+            chunks = pd.read_csv(file_path, delimiter=delimiter, header=None, encoding=encoding_used, chunksize=chunk_size)
 
-        # Use chunksize para lidar com grandes arquivos
-        chunk_size = 10000  # Tamanho do pedaço (ajuste conforme necessário)
-        chunks = pd.read_csv(file_path, delimiter=delimiter, header=None, encoding=encoding_used, chunksize=chunk_size)
+            # Cria o arquivo CSV a partir dos pedaços
+            with open(output_file, 'w', encoding="utf-8", newline='') as out_file:
+                for chunk in chunks:
+                    chunk.to_csv(out_file, index=False, header=out_file.tell()==0)  # Adiciona cabeçalho apenas na primeira iteração
 
-        # Cria o arquivo CSV a partir dos pedaços
-        with open(output_file, 'w', encoding="utf-8", newline='') as out_file:
-            for chunk in chunks:
-                chunk.to_csv(out_file, index=False, header=out_file.tell()==0)  # Adiciona cabeçalho apenas na primeira iteração
-
-        # Simula o progresso da conversão
-        for i in range(101):
-            progress_bar["value"] = i
+            # Atualiza o progresso geral da conversão de arquivos
+            progress = (index + 1) / total_files * 100
+            progress_bar["value"] = progress
             root.update_idletasks()
             root.after(5)  # Pequeno delay para melhorar a UX
-        
-        messagebox.showinfo("Sucesso!", f"Conversão concluída!\nArquivo salvo como: {output_file}")
+
+        messagebox.showinfo("Sucesso!", f"Conversão concluída para todos os arquivos.")
     
     except Exception as e:
         messagebox.showerror("Erro", f"Erro ao realizar a conversão: {str(e)}")
@@ -108,10 +110,10 @@ file_label.pack(pady=5)
 type_label = tk.Label(root, text="Tipo de arquivo: -", fg="blue")
 type_label.pack(pady=5)
 
-upload_btn = tk.Button(root, text="Subir Arquivo", command=upload_file)
+upload_btn = tk.Button(root, text="Subir Arquivos", command=upload_files)
 upload_btn.pack(pady=5)
 
-convert_btn = tk.Button(root, text="Converter para CSV", command=convert_file)
+convert_btn = tk.Button(root, text="Converter para CSV", command=convert_files)
 convert_btn.pack(pady=5)
 
 progress_bar = ttk.Progressbar(root, orient="horizontal", length=300, mode="determinate")
