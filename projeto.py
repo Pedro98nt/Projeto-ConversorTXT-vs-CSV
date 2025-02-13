@@ -34,15 +34,19 @@ def convert_files():
             
             output_file = os.path.join(destination_folder, file.replace(ext, f".{selected_format}"))
             
-            if ext == ".txt":
-                df = pd.read_csv(file_path, delimiter="\t", header=None, encoding="utf-8")
-            elif ext == ".csv":
-                df = pd.read_csv(file_path, encoding="utf-8")
-            elif ext == ".xlsx":
-                df = pd.read_excel(file_path)
-            elif ext == ".json":
-                df = pd.read_json(file_path)
-            else:
+            try:
+                if ext == ".txt":
+                    df = pd.read_csv(file_path, delimiter="\t", header=None, encoding="utf-8-sig", errors="replace")
+                elif ext == ".csv":
+                    df = pd.read_csv(file_path, encoding="utf-8-sig", errors="replace")
+                elif ext == ".xlsx":
+                    df = pd.read_excel(file_path)
+                elif ext == ".json":
+                    df = pd.read_json(file_path)
+                else:
+                    continue
+            except Exception as e:
+                messagebox.showwarning("Aviso", f"Erro ao ler {file}: {str(e)}")
                 continue
             
             if selected_format == "csv":
