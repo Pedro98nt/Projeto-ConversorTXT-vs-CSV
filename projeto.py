@@ -20,8 +20,7 @@ def convert_files():
         messagebox.showerror("Erro", "Selecione as pastas de origem e destino!")
         return
     
-    file_types = {".txt": "csv", ".csv": "xlsx", ".xlsx": "json", ".json": "csv"}
-    
+    selected_format = format_var.get()
     files = [f for f in os.listdir(source_folder) if os.path.isfile(os.path.join(source_folder, f))]
     if not files:
         messagebox.showerror("Erro", "Nenhum arquivo encontrado na pasta de origem!")
@@ -33,29 +32,29 @@ def convert_files():
             file_path = os.path.join(source_folder, file)
             ext = os.path.splitext(file)[-1].lower()
             
-            if ext in file_types:
-                output_ext = file_types[ext]
-                output_file = os.path.join(destination_folder, file.replace(ext, f".{output_ext}"))
-                
-                if ext == ".txt":
-                    df = pd.read_csv(file_path, delimiter="\t", header=None, encoding="utf-8", errors="replace")
-                elif ext == ".csv":
-                    df = pd.read_csv(file_path, encoding="utf-8", errors="replace")
-                elif ext == ".xlsx":
-                    df = pd.read_excel(file_path)
-                elif ext == ".json":
-                    df = pd.read_json(file_path)
-                
-                if output_ext == "csv":
-                    df.to_csv(output_file, index=False)
-                elif output_ext == "xlsx":
-                    df.to_excel(output_file, index=False)
-                elif output_ext == "json":
-                    df.to_json(output_file, orient="records")
-                
-                progress_bar["value"] = i + 1
-                root.update_idletasks()
-                
+            output_file = os.path.join(destination_folder, file.replace(ext, f".{selected_format}"))
+            
+            if ext == ".txt":
+                df = pd.read_csv(file_path, delimiter="\t", header=None, encoding="utf-8")
+            elif ext == ".csv":
+                df = pd.read_csv(file_path, encoding="utf-8")
+            elif ext == ".xlsx":
+                df = pd.read_excel(file_path)
+            elif ext == ".json":
+                df = pd.read_json(file_path)
+            else:
+                continue
+            
+            if selected_format == "csv":
+                df.to_csv(output_file, index=False)
+            elif selected_format == "xlsx":
+                df.to_excel(output_file, index=False)
+            elif selected_format == "json":
+                df.to_json(output_file, orient="records")
+            
+            progress_bar["value"] = i + 1
+            root.update_idletasks()
+            
         messagebox.showinfo("Sucesso!", "Conversão concluída!")
     except Exception as e:
         messagebox.showerror("Erro", f"Erro ao converter: {str(e)}")
@@ -71,6 +70,7 @@ def toggle_theme():
     root.config(bg=bg_color)
     source_label.config(bg=bg_color, fg=fg_color)
     destination_label.config(bg=bg_color, fg=fg_color)
+    format_label.config(bg=bg_color, fg=fg_color)
     
     source_btn.config(bg=btn_color, fg=fg_color)
     destination_btn.config(bg=btn_color, fg=fg_color)
@@ -79,7 +79,7 @@ def toggle_theme():
 
 root = tk.Tk()
 root.title("Conversor de Arquivos")
-root.geometry("500x350")
+root.geometry("500x400")
 
 dark_mode = False
 root.config(bg="white")
@@ -95,6 +95,13 @@ source_btn.pack(pady=5)
 
 destination_btn = tk.Button(root, text="Selecionar Pasta de Destino", command=select_destination_folder, bg="lightgray")
 destination_btn.pack(pady=5)
+
+format_label = tk.Label(root, text="Selecionar formato de saída:", bg="white")
+format_label.pack(pady=5)
+
+format_var = tk.StringVar(value="csv")
+format_dropdown = ttk.Combobox(root, textvariable=format_var, values=["csv", "xlsx", "json"])
+format_dropdown.pack(pady=5)
 
 convert_btn = tk.Button(root, text="Converter Arquivos", command=convert_files, bg="lightgray")
 convert_btn.pack(pady=5)
