@@ -36,14 +36,20 @@ def convert_files():
             
             try:
                 if ext == ".txt":
-                    df = pd.read_csv(file_path, delimiter="\t", header=None, encoding="utf-8-sig", errors="replace")
+                    df = pd.read_csv(file_path, delimiter="\t", header=None, encoding="utf-8-sig")
                 elif ext == ".csv":
-                    df = pd.read_csv(file_path, encoding="utf-8-sig", errors="replace")
+                    df = pd.read_csv(file_path, encoding="utf-8-sig")
                 elif ext == ".xlsx":
                     df = pd.read_excel(file_path)
                 elif ext == ".json":
                     df = pd.read_json(file_path)
                 else:
+                    continue
+            except UnicodeDecodeError:
+                try:
+                    df = pd.read_csv(file_path, delimiter="\t", header=None, encoding="latin1")
+                except Exception as e:
+                    messagebox.showwarning("Aviso", f"Erro ao ler {file}: {str(e)}")
                     continue
             except Exception as e:
                 messagebox.showwarning("Aviso", f"Erro ao ler {file}: {str(e)}")
